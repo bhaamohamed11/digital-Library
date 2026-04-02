@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700&family=Cairo:wght@300;400;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: #0A0F1E;
+    color: #F9FAFB;
+    font-family: 'Inter', 'Cairo', sans-serif;
+    direction: ltr;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold
+           hover:from-purple-500 hover:to-indigo-500 transition-all duration-300 shadow-lg hover:shadow-purple-500/25
+           active:scale-95 cursor-pointer;
+  }
+  .btn-secondary {
+    @apply bg-white/10 border border-white/20 text-white px-6 py-3 rounded-xl font-semibold
+           hover:bg-white/20 transition-all duration-300 backdrop-blur-sm cursor-pointer;
+  }
+  .card {
+    @apply bg-gradient-to-br from-gray-900 to-gray-800 border border-white/10 rounded-2xl
+           hover:border-purple-500/40 transition-all duration-300;
+  }
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+  .input-field {
+    @apply w-full bg-gray-800/60 border border-white/10 rounded-xl px-4 py-3 text-white
+           placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2
+           focus:ring-purple-500/20 transition-all duration-300;
+  }
+  .tag {
+    @apply bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs px-3 py-1 rounded-full;
+  }
+  .section-title {
+    @apply text-3xl font-bold text-white mb-2;
+    font-family: 'Cairo', sans-serif;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .text-shadow { text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+  .book-hover { @apply hover:scale-105 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300; }
+}
+
+/* Smooth page transitions */
+.page-enter { animation: slideUp 0.4s ease-out; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #111827; }
+::-webkit-scrollbar-thumb { background: #7C3AED; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #9333EA; }
