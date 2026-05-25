@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, BookOpen, User, Clock, LogOut, Edit2, Save, X, Lock, Eye, EyeOff, ShoppingBag } from 'lucide-react';
+import { Heart, BookOpen, User, Clock, LogOut, Edit2, Save, X, Lock, Eye, EyeOff, ShoppingBag, Download, ArrowLeft } from 'lucide-react';
 import useStore from '../stores/useStore';
 import BookCard from '../components/BookCard';
 import api from '../api/axios';
@@ -10,22 +10,20 @@ import toast from 'react-hot-toast';
 const TABS = [
   { id: 'favorites', label: 'Favorites', icon: Heart },
   { id: 'orders', label: 'My Books', icon: ShoppingBag },
-  { id: 'history', label: 'History', icon: Clock },
   { id: 'profile', label: 'Profile', icon: User },
 ];
 
 export default function DashboardPage() {
-  const { user, logout, fetchProfile, setUser } = useStore();
+  const { user, logout, setUser } = useStore();
   const [tab, setTab] = useState('favorites');
   const [favBooks, setFavBooks] = useState([]);
-  const [history, setHistory] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [readerBook, setReaderBook] = useState(null);
   const navigate = useNavigate();
 
-  // Edit Profile state
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', avatar: '' });
-  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwForm, setPwForm] = useState({ newPw: '', confirm: '' });
   const [showPw, setShowPw] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
@@ -40,11 +38,9 @@ export default function DashboardPage() {
     try {
       const [favRes, histRes, ordersRes] = await Promise.all([
         api.get('/users/favorites'),
-        api.get('/users/history'),
         api.get('/orders/my-orders'),
       ]);
       setFavBooks(favRes.data || []);
-      setHistory(histRes.data || []);
       setOrders(ordersRes.data || []);
     } catch { }
   };
@@ -64,19 +60,66 @@ export default function DashboardPage() {
 
   const handleChangePassword = async () => {
     if (!pwForm.newPw) { toast.error('Enter new password'); return; }
-    if (pwForm.newPw.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (pwForm.newPw.length < 6) { toast.error('Min 6 characters'); return; }
     if (pwForm.newPw !== pwForm.confirm) { toast.error("Passwords don't match"); return; }
     setSavingPw(true);
     try {
       await api.put('/users/profile', { password: pwForm.newPw });
       toast.success('Password changed! 🔒');
-      setPwForm({ current: '', newPw: '', confirm: '' });
+      setPwForm({ newPw: '', confirm: '' });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to change password');
+      toast.error(err.response?.data?.message || 'Failed');
     } finally { setSavingPw(false); }
   };
 
+  const handleDownload = async (book) => {
+    if (!book?.pdfUrl) { toast.error('No PDF available'); return; }
+    toast.loading('Preparing...', { id: 'dl' });
+    try {
+      const res = await fetch(book.pdfUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${book.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Downloaded! 📥', { id: 'dl' });
+    } catch { toast.error('Download failed', { id: 'dl' }); }
+  };
+
   if (!user) return null;
+
+  // ===== PDF READER =====
+  if (readerBook) {
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
+        <div className="flex items-center gap-3 px-4 py-3 bg-gray-900 border-b border-white/10 shrink-0">
+          <button onClick={() => setReaderBook(null)}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+          <div className="flex-1 text-center">
+            <p className="text-white font-bold text-sm truncate">{readerBook.title}</p>
+            <p className="text-gray-500 text-xs">{readerBook.author}</p>
+          </div>
+          <button onClick={() => handleDownload(readerBook)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-400 text-xs hover:bg-purple-600/30 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Download
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden bg-white">
+          <iframe
+            src={readerBook.pdfUrl}
+            className="w-full h-full border-0"
+            title={readerBook.title}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20">
@@ -114,7 +157,6 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Content */}
         <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
 
           {/* FAVORITES */}
@@ -135,7 +177,7 @@ export default function DashboardPage() {
             )
           )}
 
-          {/* MY BOOKS (ORDERS) */}
+          {/* MY BOOKS */}
           {tab === 'orders' && (
             orders.length === 0 ? (
               <div className="text-center py-20">
@@ -147,35 +189,48 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {orders.map((o, i) => o.book && <BookCard key={o._id} book={o.book} index={i} />)}
+              <div className="space-y-4 max-w-3xl">
+                {orders.map((order) => order.book && (
+                  <motion.div key={order._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="glass p-4 rounded-2xl flex items-center gap-4">
+                    <img src={order.book.cover} alt={order.book.title}
+                      className="w-16 h-20 object-cover rounded-xl shrink-0"
+                      onError={(e) => e.target.src = 'https://via.placeholder.com/60x80?text=📖'} />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-white truncate">{order.book.title}</h3>
+                      <p className="text-sm text-gray-400">{order.book.author}</p>
+                      <p className="text-purple-400 font-bold text-sm mt-1">${order.price}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      {order.book.pdfUrl ? (
+                        <button onClick={() => setReaderBook(order.book)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl btn-primary text-sm">
+                          <BookOpen className="w-4 h-4" /> Read
+                        </button>
+                      ) : (
+                        <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 text-gray-600 text-sm cursor-not-allowed">
+                          <BookOpen className="w-4 h-4" /> No PDF
+                        </button>
+                      )}
+                      {order.book.pdfUrl && (
+                        <button onClick={() => handleDownload(order.book)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-sm transition-colors">
+                          <Download className="w-4 h-4" /> Download
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             )
           )}
 
-          {/* HISTORY */}
-          {tab === 'history' && (
-            history.length === 0 ? (
-              <div className="text-center py-20">
-                <Clock className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">No reading history</h3>
-                <p className="text-gray-500 mb-6">Books you open will appear here</p>
-                <Link to="/books" className="btn-primary inline-flex items-center gap-2">
-                  <BookOpen className="w-4 h-4" /> Start Reading
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {history.map((b, i) => <BookCard key={b._id} book={b} index={i} />)}
-              </div>
-            )
-          )}
+         
 
           {/* PROFILE */}
           {tab === 'profile' && (
             <div className="max-w-lg space-y-6">
-
-              {/* Account Info */}
               <div className="glass p-6 rounded-2xl">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-bold text-white">Account Details</h2>
@@ -191,7 +246,6 @@ export default function DashboardPage() {
                     </button>
                   )}
                 </div>
-
                 {!editing ? (
                   <div className="space-y-4">
                     <div>
@@ -242,7 +296,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Change Password */}
               <div className="glass p-6 rounded-2xl">
                 <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
                   <Lock className="w-5 h-5 text-purple-400" /> Change Password
@@ -250,9 +303,7 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   <div className="relative">
                     <label className="block text-sm text-gray-400 mb-1">New Password</label>
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      value={pwForm.newPw}
+                    <input type={showPw ? 'text' : 'password'} value={pwForm.newPw}
                       onChange={(e) => setPwForm({ ...pwForm, newPw: e.target.value })}
                       className="input-field pr-10" placeholder="Min 6 characters" />
                     <button onClick={() => setShowPw(!showPw)}
@@ -273,7 +324,6 @@ export default function DashboardPage() {
                   </button>
                 </div>
               </div>
-
             </div>
           )}
         </motion.div>

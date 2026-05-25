@@ -16,9 +16,8 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/orders', require('./routes/orders'));
-app.use('/api/reviewer', require('./routes/reviewer'));
 app.use('/api/upload', require('./routes/upload'));
-
+app.use('/api/stats', require('./routes/stats'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'Library API running' }));
 

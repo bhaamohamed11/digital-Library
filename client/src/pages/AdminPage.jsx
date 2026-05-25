@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, Edit2, Trash2, Save, X, Star, BookOpen, Tag, Upload, FileUp } from "lucide-react";
+import { Plus, Edit2, Trash2, Save, X, Star, BookOpen, Tag, Upload, FileUp, Users, ShoppingBag } from "lucide-react";
 import useStore from "../stores/useStore";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -13,7 +13,7 @@ const EMPTY_FORM = {
 };
 
 export default function AdminPage() {
-  const { user, fetchBooks, books, loading } = useStore();
+  const { user, fetchBooks, books } = useStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("books");
   const [form, setForm] = useState(EMPTY_FORM);
@@ -23,18 +23,25 @@ export default function AdminPage() {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
 
-  // Categories state
   const [categories, setCategories] = useState([]);
   const [catForm, setCatForm] = useState({ name: "", icon: "📚", description: "" });
   const [editingCat, setEditingCat] = useState(null);
   const [showCatForm, setShowCatForm] = useState(false);
   const [catSubmitting, setCatSubmitting] = useState(false);
 
+  const [users, setUsers] = useState([]);
+  const [orders, setOrders] = useState([]);
+
   useEffect(() => {
     if (!user || user.role !== "admin") { navigate("/"); return; }
     fetchBooks({ limit: 100 });
     loadCategories();
   }, [user]);
+
+  useEffect(() => {
+    if (activeTab === "users") loadUsers();
+    if (activeTab === "orders") loadOrders();
+  }, [activeTab]);
 
   const loadCategories = async () => {
     try {
@@ -43,8 +50,26 @@ export default function AdminPage() {
     } catch { toast.error("Failed to load categories"); }
   };
 
+  const loadUsers = async () => {
+    try {
+      const { data } = await api.get("/users");
+      setUsers(data);
+    } catch { toast.error("Failed to load users"); }
+  };
+
+  const loadOrders = async () => {
+    try {
+      const { data } = await api.get("/orders/all");
+      setOrders(data);
+    } catch { toast.error("Failed to load orders"); }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.isFree && form.price < 200) {
+      toast.error('Minimum price is $200');
+      return;
+    }
     setSubmitting(true);
     try {
       if (editing) {
@@ -85,7 +110,6 @@ export default function AdminPage() {
     } catch { toast.error("Delete failed"); }
   };
 
-  // Category handlers
   const handleCatSubmit = async (e) => {
     e.preventDefault();
     setCatSubmitting(true);
@@ -121,6 +145,31 @@ export default function AdminPage() {
     } catch { toast.error("Delete failed"); }
   };
 
+  const handleUpdateRole = async (userId, role) => {
+    try {
+      await api.put(`/users/${userId}/role`, { role });
+      toast.success("Role updated!");
+      loadUsers();
+    } catch { toast.error("Failed to update role"); }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!confirm("Delete this user?")) return;
+    try {
+      await api.delete(`/users/${id}`);
+      toast.success("User deleted");
+      loadUsers();
+    } catch { toast.error("Delete failed"); }
+  };
+
+  const handleUpdateOrderStatus = async (id, status) => {
+    try {
+      await api.put(`/orders/${id}/status`, { status });
+      toast.success("Order updated!");
+      loadOrders();
+    } catch { toast.error("Failed to update order"); }
+  };
+
   if (!user || user.role !== "admin") return null;
 
   return (
@@ -132,25 +181,30 @@ export default function AdminPage() {
             <h1 className="text-4xl font-black text-white mb-2">⚙️ Admin Panel</h1>
             <p className="text-gray-400">{books.length} books · {categories.length} categories</p>
           </div>
-          <button onClick={() => {
-            if (activeTab === "books") { setForm(EMPTY_FORM); setEditing(null); setShowForm(!showForm); }
-            else { setCatForm({ name: "", icon: "📚", description: "" }); setEditingCat(null); setShowCatForm(!showCatForm); }
-          }} className="btn-primary flex items-center gap-2">
-            {(activeTab === "books" ? showForm : showCatForm) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {(activeTab === "books" ? showForm : showCatForm) ? "Cancel" : activeTab === "books" ? "Add Book" : "Add Category"}
-          </button>
+          {(activeTab === "books" || activeTab === "categories") && (
+            <button onClick={() => {
+              if (activeTab === "books") { setForm(EMPTY_FORM); setEditing(null); setShowForm(!showForm); }
+              else { setCatForm({ name: "", icon: "📚", description: "" }); setEditingCat(null); setShowCatForm(!showCatForm); }
+            }} className="btn-primary flex items-center gap-2">
+              {(activeTab === "books" ? showForm : showCatForm) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {(activeTab === "books" ? showForm : showCatForm) ? "Cancel" : activeTab === "books" ? "Add Book" : "Add Category"}
+            </button>
+          )}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-8">
-          <button onClick={() => setActiveTab("books")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === "books" ? "bg-purple-600 text-white" : "bg-white/5 text-gray-400 hover:bg-white/10"}`}>
-            <BookOpen className="w-4 h-4" /> Books
-          </button>
-          <button onClick={() => setActiveTab("categories")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === "categories" ? "bg-purple-600 text-white" : "bg-white/5 text-gray-400 hover:bg-white/10"}`}>
-            <Tag className="w-4 h-4" /> Categories
-          </button>
+        <div className="flex gap-2 mb-8 flex-wrap">
+          {[
+            { id: "books", icon: <BookOpen className="w-4 h-4" />, label: "Books" },
+            { id: "categories", icon: <Tag className="w-4 h-4" />, label: "Categories" },
+            { id: "users", icon: <Users className="w-4 h-4" />, label: "Users" },
+            { id: "orders", icon: <ShoppingBag className="w-4 h-4" />, label: "Orders" },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? "bg-purple-600 text-white" : "bg-white/5 text-gray-400 hover:bg-white/10"}`}>
+              {tab.icon} {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* ===== BOOKS TAB ===== */}
@@ -167,74 +221,79 @@ export default function AdminPage() {
                     <input required value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} className="input-field" placeholder="Author name" /></div>
                   <div className="sm:col-span-2"><label className="text-sm text-gray-400 mb-1 block">Description *</label>
                     <textarea required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="input-field resize-none" placeholder="Book description" /></div>
-                    <div>
-  <label className="text-sm text-gray-400 mb-1 block">Cover Image *</label>
-  <div className="flex gap-2">
-    <input value={form.cover} onChange={(e) => setForm({ ...form, cover: e.target.value })}
-      className="input-field flex-1" placeholder="https://... أو ارفع صورة" />
-    <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white text-sm cursor-pointer transition-colors shrink-0">
-      <Upload className="w-4 h-4" />
-      {uploadingImg ? <span className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" /> : 'Upload'}
-      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        setUploadingImg(true);
-        try {
-          const fd = new FormData(); fd.append('file', file);
-          const { data } = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-          setForm(f => ({ ...f, cover: data.url }));
-          toast.success('Image uploaded! ✅');
-        } catch { toast.error('Image upload failed'); }
-        finally { setUploadingImg(false); }
-      }} />
-    </label>
-  </div>
-  {form.cover && <img src={form.cover} alt="preview" className="w-16 h-20 object-cover rounded-lg mt-2" onError={(e) => e.target.style.display='none'} />}
-</div>
-
-<div>
-  <label className="text-sm text-gray-400 mb-1 block">PDF File *</label>
-  <div className="flex gap-2">
-    <input value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })}
-      className="input-field flex-1" placeholder="https://... أو ارفع PDF" />
-    <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-400 hover:text-purple-300 text-sm cursor-pointer transition-colors shrink-0">
-      <FileUp className="w-4 h-4" />
-      {uploadingPdf ? <span className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" /> : 'Upload PDF'}
-      <input type="file" accept="application/pdf" className="hidden" onChange={async (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        setUploadingPdf(true);
-        try {
-          const fd = new FormData(); fd.append('file', file);
-          const { data } = await api.post('/upload/pdf', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-          setForm(f => ({ ...f, pdfUrl: data.url }));
-          toast.success('PDF uploaded! ✅');
-        } catch { toast.error('PDF upload failed'); }
-        finally { setUploadingPdf(false); }
-      }} />
-    </label>
-  </div>
-  {form.pdfUrl && <p className="text-xs text-green-400 mt-1.5 flex items-center gap-1"><FileUp className="w-3 h-3" /> PDF ready</p>}
-</div>
-                
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Cover Image *</label>
+                    <div className="flex gap-2">
+                      <input value={form.cover} onChange={(e) => setForm({ ...form, cover: e.target.value })} className="input-field flex-1" placeholder="https://..." />
+                      <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white text-sm cursor-pointer transition-colors shrink-0">
+                        <Upload className="w-4 h-4" />
+                        {uploadingImg ? <span className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" /> : 'Upload'}
+                        <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                          const file = e.target.files[0]; if (!file) return;
+                          setUploadingImg(true);
+                          try {
+                            const fd = new FormData(); fd.append('file', file);
+                            const { data } = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                            setForm(f => ({ ...f, cover: data.url }));
+                            toast.success('Image uploaded! ✅');
+                          } catch { toast.error('Image upload failed'); }
+                          finally { setUploadingImg(false); }
+                        }} />
+                      </label>
+                    </div>
+                    {form.cover && <img src={form.cover} alt="preview" className="w-16 h-20 object-cover rounded-lg mt-2" onError={(e) => e.target.style.display = 'none'} />}
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">PDF File</label>
+                    <div className="flex gap-2">
+                      <input value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} className="input-field flex-1" placeholder="https://..." />
+                      <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-400 text-sm cursor-pointer transition-colors shrink-0">
+                        <FileUp className="w-4 h-4" />
+                        {uploadingPdf ? <span className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" /> : 'Upload PDF'}
+                        <input type="file" accept="application/pdf" className="hidden" onChange={async (e) => {
+                          const file = e.target.files[0]; if (!file) return;
+                          setUploadingPdf(true);
+                          try {
+                            const fd = new FormData(); fd.append('file', file);
+                            const { data } = await api.post('/upload/pdf', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                            setForm(f => ({ ...f, pdfUrl: data.url }));
+                            toast.success('PDF uploaded! ✅');
+                          } catch { toast.error('PDF upload failed'); }
+                          finally { setUploadingPdf(false); }
+                        }} />
+                      </label>
+                    </div>
+                    {form.pdfUrl && <p className="text-xs text-green-400 mt-1.5 flex items-center gap-1"><FileUp className="w-3 h-3" /> PDF ready</p>}
+                  </div>
                   <div><label className="text-sm text-gray-400 mb-1 block">Category</label>
                     <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-field">
                       {categories.length > 0
                         ? categories.map((c) => <option key={c._id} value={c.name}>{c.icon} {c.name}</option>)
-                        : ["Fiction","Science","History","Technology","Philosophy","Art"].map(c => <option key={c}>{c}</option>)}
+                        : ["Fiction", "Science", "History", "Technology", "Philosophy", "Art"].map(c => <option key={c}>{c}</option>)}
                     </select></div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Language</label>
-                    <input value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} className="input-field" placeholder="English" /></div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Pages</label>
-                    <input type="number" value={form.pages} onChange={(e) => setForm({ ...form, pages: e.target.value })} className="input-field" /></div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Publish Year</label>
-                    <input type="number" value={form.publishYear} onChange={(e) => setForm({ ...form, publishYear: e.target.value })} className="input-field" /></div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Price ($)</label>
-                    <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="input-field" placeholder="0" /></div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Status</label>
-                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="input-field">
-                      <option value="published">✅ Published</option>
-                      <option value="submit">⏳ Submitted (for review)</option>
-                      <option value="review">🔍 Under Review</option>
-                    </select></div>
+                 
+                 
+                         <div>
+  <label className="text-sm text-gray-400 mb-1 block">Price ($)</label>
+  <input
+    type="number"
+    value={form.price}
+    onChange={(e) => setForm({ ...form, price: e.target.value })}
+    className="input-field"
+    placeholder="200"
+    min="200"
+  />
+  {!form.isFree && form.price < 200 && form.price > 0 && (
+    <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
+      ⚠️ Minimum price is $200
+    </p>
+  )}
+</div>
+                                
+ 
+  
+                
+                 
                   <div className="sm:col-span-2 flex items-center gap-6">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={form.isFree} onChange={(e) => setForm({ ...form, isFree: e.target.checked })} className="w-4 h-4 accent-purple-500" />
@@ -257,7 +316,6 @@ export default function AdminPage() {
                 </form>
               </motion.div>
             )}
-
             <div className="glass rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -265,10 +323,8 @@ export default function AdminPage() {
                     <tr className="text-gray-400 text-left">
                       <th className="p-4">Book</th>
                       <th className="p-4">Category</th>
-                      <th className="p-4">Rating</th>
                       <th className="p-4">Price</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">Featured</th>
+                      
                       <th className="p-4">Actions</th>
                     </tr>
                   </thead>
@@ -285,9 +341,6 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="p-4"><span className="tag text-xs">{book.category}</span></td>
-                        <td className="p-4 text-amber-400 font-medium">
-                          <div className="flex items-center gap-1"><Star className="w-3 h-3 fill-amber-400" />{Number(book.rating).toFixed(1)}</div>
-                        </td>
                         <td className="p-4 text-purple-400 font-bold">
                           {book.isFree ? <span className="text-green-400">Free</span> : `$${book.price || 0}`}
                         </td>
@@ -297,7 +350,6 @@ export default function AdminPage() {
                           {book.status === 'review' && <span className="text-xs text-blue-400">🔍 In Review</span>}
                           {!book.status && <span className="text-xs text-gray-500">—</span>}
                         </td>
-                        <td className="p-4">{book.featured && <span className="text-amber-400 text-xs">⭐ Yes</span>}</td>
                         <td className="p-4">
                           <div className="flex gap-2">
                             <button onClick={() => handleEdit(book)} className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 flex items-center justify-center transition-colors">
@@ -321,8 +373,7 @@ export default function AdminPage() {
         {activeTab === "categories" && (
           <>
             {showCatForm && (
-              <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-                className="glass p-8 rounded-2xl mb-8">
+              <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="glass p-8 rounded-2xl mb-8">
                 <h2 className="text-xl font-bold text-white mb-6">{editingCat ? "Edit Category" : "Add New Category"}</h2>
                 <form onSubmit={handleCatSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div><label className="text-sm text-gray-400 mb-1 block">Name *</label>
@@ -343,11 +394,9 @@ export default function AdminPage() {
                 </form>
               </motion.div>
             )}
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {categories.map((cat) => (
-                <motion.div key={cat._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="glass p-5 rounded-2xl flex items-center justify-between">
+                <motion.div key={cat._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass p-5 rounded-2xl flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{cat.icon || "📚"}</span>
                     <div>
@@ -369,6 +418,102 @@ export default function AdminPage() {
             </div>
           </>
         )}
+
+        {/* ===== USERS TAB ===== */}
+        {activeTab === "users" && (
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-white/10">
+                  <tr className="text-gray-400 text-left">
+                    <th className="p-4">User</th>
+                    <th className="p-4">Email</th>
+                    <th className="p-4">Role</th>
+                    <th className="p-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u._id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center overflow-hidden shrink-0">
+                            {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover" alt="" /> : <span className="text-white font-bold text-sm">{u.name?.[0]}</span>}
+                          </div>
+                          <p className="font-medium text-white">{u.name}</p>
+                        </div>
+                      </td>
+                      <td className="p-4 text-gray-400">{u.email}</td>
+                      <td className="p-4">
+                        <select value={u.role} onChange={(e) => handleUpdateRole(u._id, e.target.value)}
+                          className="bg-gray-800/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-purple-500">
+                          <option value="user">📚 User</option>                        
+                          <option value="admin">⭐ Admin</option>
+                        </select>
+                      </td>
+                      <td className="p-4">
+                        {u._id !== user._id && (
+                          <button onClick={() => handleDeleteUser(u._id)} className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ===== ORDERS TAB ===== */}
+        {activeTab === "orders" && (
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-white/10">
+                  <tr className="text-gray-400 text-left">
+                    <th className="p-4">User</th>
+                    <th className="p-4">Book</th>
+                    <th className="p-4">Price</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order._id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                      <td className="p-4">
+                        <p className="font-medium text-white">{order.user?.name}</p>
+                        <p className="text-xs text-gray-400">{order.user?.email}</p>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <img src={order.book?.cover} alt="" className="w-8 h-10 object-cover rounded-lg shrink-0" onError={(e) => e.target.style.display = 'none'} />
+                          <div>
+                            <p className="text-white line-clamp-1">{order.book?.title}</p>
+                            <span className="tag text-xs">{order.book?.category}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-purple-400 font-bold">${order.price}</td>
+                      <td className="p-4 text-gray-400 text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
+<td className="p-4">
+  <button
+    onClick={() => handleUpdateOrderStatus(order._id, 'shipped')}
+    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors">
+    🚚 Mark Shipped
+  </button>
+</td>
+
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -79,15 +79,18 @@ export default function BooksPage() {
           {/* Search */}
           <div className="relative flex-1 min-w-48">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              defaultValue={currentSearch}
-              placeholder="Search books or authors..."
-              className="w-full bg-gray-800/60 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') updateFilter('search', e.target.value);
-              }}
-            />
+           <input
+  type="text"
+  defaultValue={currentSearch}
+  placeholder="Search books or authors..."
+  className="w-full bg-gray-800/60 border border-white/10 rounded-xl py-2 pl-9 pr-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+  onChange={(e) => {
+    clearTimeout(window._searchTimer);
+    window._searchTimer = setTimeout(() => {
+      updateFilter('search', e.target.value);
+    }, 400);
+  }}
+/>
           </div>
 
           {/* Category */}
@@ -135,7 +138,7 @@ export default function BooksPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+            className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
           >
             {books.map((book, i) => (
               <BookCard key={book._id} book={book} index={i} />

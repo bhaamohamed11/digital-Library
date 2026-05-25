@@ -68,10 +68,9 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
           >
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-purple-500/20 border border-purple-500/30 rounded-full px-4 py-2 text-purple-300 text-sm mb-8">
-              <Sparkles className="w-4 h-4" />
-              Your #1 Digital Library Platform
-            </div>
+           
+         
+         
 
             <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight">
               Discover a World of
@@ -114,81 +113,25 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Books */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h2 className="section-title">📚 Featured Books</h2>
-            <p className="text-gray-400">Editor's picks — handpicked for you</p>
-          </div>
-          <Link to="/books?featured=true" className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors text-sm font-medium">
-            View All <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        {loading && featuredBooks.length === 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} type="book" />)}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {featuredBooks.slice(0, 10).map((book, i) => (
-              <BookCard key={book._id} book={book} index={i} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Categories */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h2 className="section-title">🗂 Browse by Category</h2>
-            <p className="text-gray-400">Explore books by topic</p>
-          </div>
-          <Link to="/categories" className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors text-sm font-medium">
-            View All <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {categories.slice(0, 8).map((cat, i) => (
-            <motion.div
-              key={cat._id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <Link
-                to={`/books?category=${encodeURIComponent(cat.name)}`}
-                className="group glass p-6 rounded-2xl hover:border-purple-500/50 transition-all duration-300 block text-center hover:scale-105"
-              >
-                <div className="text-4xl mb-3">{CATEGORY_ICONS[cat.name] || '📘'}</div>
-                <h3 className="font-bold text-white group-hover:text-purple-300 transition-colors">{cat.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">{cat.bookCount || 0} books</p>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA Banner */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-24">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900 to-indigo-900 border border-purple-500/30 p-12 text-center">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute -top-4 -right-4 w-64 h-64 bg-purple-500 rounded-full blur-3xl" />
-            <div className="absolute -bottom-4 -left-4 w-64 h-64 bg-indigo-500 rounded-full blur-3xl" />
-          </div>
-          <div className="relative">
-            <h2 className="text-4xl font-black text-white mb-4">Start Your Reading Journey Today</h2>
-            <p className="text-purple-200 text-lg mb-8 max-w-xl mx-auto">Sign up for free and get instant access to hundreds of books</p>
-            <Link to="/register" className="btn-primary text-lg inline-flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
-              Create Your Free Account
-            </Link>
-          </div>
-        </div>
-      </section>
+     
+ 
+          
+        
+    
+     
+  
+  
     </div>
   );
 }
+
+
+
+
+
+    
+
+
+
+
+

@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, ShoppingBag, Download } from 'lucide-react';
+import { BookOpen, ShoppingBag, Download, ArrowLeft } from 'lucide-react';
 import useStore from '../stores/useStore';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
 export default function OrdersPage() {
   const { user } = useStore();
-  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [readerBook, setReaderBook] = useState(null);
 
   useEffect(() => { loadOrders(); }, []);
 
@@ -22,15 +22,52 @@ export default function OrdersPage() {
     finally { setLoading(false); }
   };
 
-  const handleDownload = (book) => {
-    if (!book?.pdfUrl) { toast.error('No PDF available for this book'); return; }
-    const a = document.createElement('a');
-    a.href = book.pdfUrl;
-    a.download = `${book.title}.pdf`;
-    a.target = '_blank';
-    a.click();
-    toast.success('Download started! 📥');
+  const handleDownload = async (book) => {
+    if (!book?.pdfUrl) { toast.error('No PDF available'); return; }
+    toast.loading('Preparing...', { id: 'dl' });
+    try {
+      const res = await fetch(book.pdfUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${book.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Downloaded! 📥', { id: 'dl' });
+    } catch { toast.error('Download failed', { id: 'dl' }); }
   };
+
+  // ===== PDF READER =====
+  if (readerBook) {
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
+        <div className="flex items-center gap-3 px-4 py-3 bg-gray-900 border-b border-white/10 shrink-0">
+          <button onClick={() => setReaderBook(null)}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+          <div className="flex-1 text-center">
+            <p className="text-white font-bold text-sm truncate">{readerBook.title}</p>
+            <p className="text-gray-500 text-xs">{readerBook.author}</p>
+          </div>
+          <button onClick={() => handleDownload(readerBook)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-600/20 border border-purple-500/30 text-purple-400 text-xs hover:bg-purple-600/30 transition-colors">
+            <Download className="w-3.5 h-3.5" /> Download
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden bg-white">
+          <iframe
+            src={readerBook.pdfUrl}
+            className="w-full h-full border-0"
+            title={readerBook.title}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (loading) return (
     <div className="min-h-screen pt-24 flex items-center justify-center">
@@ -65,14 +102,22 @@ export default function OrdersPage() {
                 <p className="text-xs text-gray-500 mt-1">{new Date(order.createdAt).toLocaleDateString()}</p>
               </div>
               <div className="flex flex-col gap-2 shrink-0">
-                <button onClick={() => navigate(`/read/${order.book?._id}`)}
-                  className="btn-primary flex items-center gap-2 text-sm">
-                  <BookOpen className="w-4 h-4" /> Read
-                </button>
-                <button onClick={() => handleDownload(order.book)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-sm transition-colors border border-white/10">
-                  <Download className="w-4 h-4" /> Download
-                </button>
+                {order.book?.pdfUrl ? (
+                  <button onClick={() => setReaderBook(order.book)}
+                    className="btn-primary flex items-center gap-2 text-sm">
+                    <BookOpen className="w-4 h-4" /> Read
+                  </button>
+                ) : (
+                  <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 text-gray-600 text-sm cursor-not-allowed">
+                    <BookOpen className="w-4 h-4" /> No PDF
+                  </button>
+                )}
+                {order.book?.pdfUrl && (
+                  <button onClick={() => handleDownload(order.book)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-sm transition-colors border border-white/10">
+                    <Download className="w-4 h-4" /> Download
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

@@ -17,11 +17,9 @@ export default function BookDetailPage() {
   const [myComment, setMyComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [purchased, setPurchased] = useState(false);
-  const [buying, setBuying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const fav = isFavorite(id);
   const inCart = isInCart(id);
-  const canRead = currentBook && (currentBook.isFree || purchased);
 
   useEffect(() => {
     fetchBook(id);
@@ -67,17 +65,6 @@ export default function BookDetailPage() {
     } finally { setSubmitting(false); }
   };
 
-  const handleBuy = async () => {
-    if (!user) { toast.error('Sign in to purchase'); return; }
-    setBuying(true);
-    try {
-      await api.post(`/orders/${id}`);
-      toast.success('Purchase successful! 🎉');
-      setPurchased(true);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Purchase failed');
-    } finally { setBuying(false); }
-  };
 
   const handleDownload = async () => {
     if (!currentBook?.pdfUrl) { toast.error('No PDF available'); return; }
@@ -115,6 +102,7 @@ export default function BookDetailPage() {
 
   if (!currentBook) return null;
   const book = currentBook;
+  const canRead = book.isFree || (user && purchased);
 
   return (
     <div className="min-h-screen pt-20">
@@ -127,13 +115,25 @@ export default function BookDetailPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
 
-          {/* Cover */}
+          {/* Cover + Actions */}
           <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}>
             <div className="sticky top-24">
               <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl shadow-purple-500/20 mb-4">
                 <img src={book.cover} alt={book.title} className="w-full h-full object-cover"
                   onError={(e) => e.target.src = `https://via.placeholder.com/300x400/1a1a2e/7C3AED?text=${encodeURIComponent(book.title.slice(0, 8))}`} />
               </div>
+
+              {/* Price */}
+              <div className="glass p-4 rounded-xl text-center mb-1">
+                {book.isFree ? (
+                   <span className="text-2xl font-black text-green-400">Free 🎁</span>
+                     ) : (
+                      <div>
+                          <span className="text-xl font-bold text-gray-400">Price: </span>
+                          <span className="text-3xl font-black text-purple-400">${book.price || 0}</span>
+                            </div>
+                             )}
+                             </div>
 
               <div className="flex flex-col gap-3">
                 {/* Cart */}
@@ -148,35 +148,15 @@ export default function BookDetailPage() {
                   {inCart ? 'Remove from Cart ✕' : 'Add to Cart'}
                 </button>
 
-                <div className="flex gap-3">
-                  {/* Favorite */}
-                  <button onClick={handleFavorite}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-sm font-medium
-                      ${fav ? 'bg-pink-500/20 border-pink-500/50 text-pink-400' : 'border-white/10 text-gray-400 hover:border-pink-500/30 hover:text-pink-400'}`}>
-                    <Heart className={`w-4 h-4 ${fav ? 'fill-pink-400' : ''}`} />
-                    {fav ? 'Saved' : 'Save'}
-                  </button>
+                {/* Favorite فقط */}
+                <button onClick={handleFavorite}
+                  className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-sm font-medium
+                    ${fav ? 'bg-pink-500/20 border-pink-500/50 text-pink-400' : 'border-white/10 text-gray-400 hover:border-pink-500/30 hover:text-pink-400'}`}>
+                  <Heart className={`w-4 h-4 ${fav ? 'fill-pink-400' : ''}`} />
+                  {fav ? 'Saved' : 'Save'}
+                </button>
 
-                  {/* Buy button فقط لو مش اشترى */}
-                  {!canRead && (
-                    <button onClick={handleBuy} disabled={buying}
-                      className="flex-1 btn-primary flex items-center justify-center gap-2 text-sm">
-                      {buying ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <ShoppingCart className="w-4 h-4" />}
-                      {buying ? 'Processing...' : `Buy $${book.price}`}
-                    </button>
-                  )}
-
-                  {/* Download button بعد الشراء */}
-                  {canRead && book.pdfUrl && (
-                    <button onClick={handleDownload} disabled={downloading}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-400 transition-all text-sm font-medium">
-                      {downloading
-                        ? <span className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
-                        : <Download className="w-4 h-4" />}
-                      {downloading ? 'Downloading...' : 'Download'}
-                    </button>
-                  )}
-                </div>
+               
               </div>
             </div>
           </motion.div>
@@ -222,27 +202,7 @@ export default function BookDetailPage() {
               </div>
             )}
 
-            {/* ===== PDF READER - بيظهر بس بعد الشراء ===== */}
-            {canRead && book.pdfUrl && (
-              <div className="mb-10">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-purple-400" /> Read Book
-                  </h2>
-                  <span className="text-xs text-green-400 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
-                    ✅ {book.isFree ? 'Free' : 'Purchased'}
-                  </span>
-                </div>
-                <div className="rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                  <iframe
-                    src={book.pdfUrl}
-                    className="w-full border-0"
-                    style={{ height: '75vh' }}
-                    title={book.title}
-                  />
-                </div>
-              </div>
-            )}
+        
 
             {/* Reviews */}
             <div className="border-t border-white/10 pt-8">

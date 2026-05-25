@@ -5,7 +5,13 @@ const getBooks = async (req, res) => {
     const { search, category, language, minRating, sort, page = 1, limit = 12, featured } = req.query;
     const query = { status: 'published' };
 
-    if (search) query.$text = { $search: search };
+    if (search) {
+  query.$or = [
+    { title: { $regex: search, $options: 'i' } },
+    { author: { $regex: search, $options: 'i' } },
+    { description: { $regex: search, $options: 'i' } },
+  ];
+}
     if (category && category !== 'all') query.category = category;
     if (language) query.language = language;
     if (minRating) query.rating = { $gte: Number(minRating) };

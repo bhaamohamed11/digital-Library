@@ -107,4 +107,35 @@ const getHistoryBooks = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getProfile, updateProfile, toggleFavorite, updateReadingHistory, getFavoriteBooks, getHistoryBooks };
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const updateUserRole = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role: req.body.role },
+      { new: true }
+    ).select('-password');
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = { register, login, getProfile, updateProfile, toggleFavorite, updateReadingHistory, getFavoriteBooks, getHistoryBooks, getAllUsers, updateUserRole, deleteUser };
