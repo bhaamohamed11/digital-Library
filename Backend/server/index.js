@@ -18,6 +18,7 @@ app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/stats', require('./routes/stats'));
+app.use('/api/contact', require('./routes/contact'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'Library API running' }));
 

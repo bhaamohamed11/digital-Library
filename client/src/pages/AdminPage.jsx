@@ -1,17 +1,41 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, Edit2, Trash2, Save, X, Star, BookOpen, Tag, Upload, FileUp, Users, ShoppingBag } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Save,
+  X,
+  Star,
+  BookOpen,
+  Tag,
+  Upload,
+  FileUp,
+  Users,
+  ShoppingBag,
+  Mail,
+} from "lucide-react";
 import useStore from "../stores/useStore";
 import api from "../api/axios";
 import toast from "react-hot-toast";
-
+ 
 const EMPTY_FORM = {
-  title: "", author: "", description: "", cover: "", category: "Fiction",
-  language: "English", pages: "", publishYear: "", featured: false,
-  pdfUrl: "", price: 0, isFree: false, status: "published",
+  title: "",
+  author: "",
+  description: "",
+  cover: "",
+  category: "Fiction",
+  language: "English",
+  pages: "",
+  publishYear: "",
+  featured: false,
+  pdfUrl: "",
+  price: 0,
+  isFree: false,
+  status: "published",
 };
-
+ 
 export default function AdminPage() {
   const { user, fetchBooks, books } = useStore();
   const navigate = useNavigate();
@@ -22,52 +46,67 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
-
+ 
   const [categories, setCategories] = useState([]);
-  const [catForm, setCatForm] = useState({ name: "", icon: "📚", description: "" });
+  const [catForm, setCatForm] = useState({
+    name: "",
+    icon: "📚",
+    description: "",
+  });
   const [editingCat, setEditingCat] = useState(null);
   const [showCatForm, setShowCatForm] = useState(false);
   const [catSubmitting, setCatSubmitting] = useState(false);
-
+ 
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
-
+  const [messages, setMessages] = useState([]);
+ 
   useEffect(() => {
-    if (!user || user.role !== "admin") { navigate("/"); return; }
+    if (!user || user.role !== "admin") {
+      navigate("/");
+      return;
+    }
     fetchBooks({ limit: 100 });
     loadCategories();
   }, [user]);
-
+ 
   useEffect(() => {
     if (activeTab === "users") loadUsers();
     if (activeTab === "orders") loadOrders();
+    if (activeTab === "messages") loadMessages();
   }, [activeTab]);
-
+ 
   const loadCategories = async () => {
     try {
       const { data } = await api.get("/categories");
       setCategories(data);
-    } catch { toast.error("Failed to load categories"); }
+    } catch {
+      toast.error("Failed to load categories");
+    }
   };
-
+ 
   const loadUsers = async () => {
     try {
       const { data } = await api.get("/users");
       setUsers(data);
-    } catch { toast.error("Failed to load users"); }
+    } catch {
+      toast.error("Failed to load users");
+    }
   };
-
+ 
   const loadOrders = async () => {
     try {
       const { data } = await api.get("/orders/all");
       setOrders(data);
-    } catch { toast.error("Failed to load orders"); }
+    } catch {
+      toast.error("Failed to load orders");
+    }
   };
-
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.isFree && form.price < 200) {
-      toast.error('Minimum price is $200');
+      toast.error("Minimum price is $200");
       return;
     }
     setSubmitting(true);
@@ -85,31 +124,43 @@ export default function AdminPage() {
       fetchBooks({ limit: 100 });
     } catch (err) {
       toast.error(err.response?.data?.message || "Operation failed");
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+    }
   };
-
+ 
   const handleEdit = (book) => {
     setForm({
-      title: book.title, author: book.author, description: book.description,
-      cover: book.cover, category: book.category, language: book.language,
-      pages: book.pages, publishYear: book.publishYear, featured: book.featured,
-      pdfUrl: book.pdfUrl || "", price: book.price || 0,
-      isFree: book.isFree || false, status: book.status || "published",
+      title: book.title,
+      author: book.author,
+      description: book.description,
+      cover: book.cover,
+      category: book.category,
+      language: book.language,
+      pages: book.pages,
+      publishYear: book.publishYear,
+      featured: book.featured,
+      pdfUrl: book.pdfUrl || "",
+      price: book.price || 0,
+      isFree: book.isFree || false,
+      status: book.status || "published",
     });
     setEditing(book._id);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
+ 
   const handleDelete = async (id) => {
     if (!confirm("Delete this book?")) return;
     try {
       await api.delete(`/books/${id}`);
       toast.success("Book deleted");
       fetchBooks({ limit: 100 });
-    } catch { toast.error("Delete failed"); }
+    } catch {
+      toast.error("Delete failed");
+    }
   };
-
+ 
   const handleCatSubmit = async (e) => {
     e.preventDefault();
     setCatSubmitting(true);
@@ -127,121 +178,228 @@ export default function AdminPage() {
       loadCategories();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed");
-    } finally { setCatSubmitting(false); }
+    } finally {
+      setCatSubmitting(false);
+    }
   };
-
+ 
   const handleEditCat = (cat) => {
-    setCatForm({ name: cat.name, icon: cat.icon || "📚", description: cat.description || "" });
+    setCatForm({
+      name: cat.name,
+      icon: cat.icon || "📚",
+      description: cat.description || "",
+    });
     setEditingCat(cat._id);
     setShowCatForm(true);
   };
-
+ 
   const handleDeleteCat = async (id) => {
     if (!confirm("Delete this category?")) return;
     try {
       await api.delete(`/categories/${id}`);
       toast.success("Category deleted");
       loadCategories();
-    } catch { toast.error("Delete failed"); }
+    } catch {
+      toast.error("Delete failed");
+    }
   };
-
+ 
   const handleUpdateRole = async (userId, role) => {
     try {
       await api.put(`/users/${userId}/role`, { role });
       toast.success("Role updated!");
       loadUsers();
-    } catch { toast.error("Failed to update role"); }
+    } catch {
+      toast.error("Failed to update role");
+    }
   };
-
+ 
   const handleDeleteUser = async (id) => {
     if (!confirm("Delete this user?")) return;
     try {
       await api.delete(`/users/${id}`);
       toast.success("User deleted");
       loadUsers();
-    } catch { toast.error("Delete failed"); }
+    } catch {
+      toast.error("Delete failed");
+    }
   };
-
+ 
   const handleUpdateOrderStatus = async (id, status) => {
     try {
       await api.put(`/orders/${id}/status`, { status });
       toast.success("Order updated!");
       loadOrders();
-    } catch { toast.error("Failed to update order"); }
+    } catch {
+      toast.error("Failed to update order");
+    }
   };
-
+ 
+  const loadMessages = async () => {
+    try {
+      const { data } = await api.get("/contact");
+      setMessages(data);
+    } catch {
+      toast.error("Failed to load messages");
+    }
+  };
+ 
+  const handleUpdateMessageStatus = async (id, status) => {
+    try {
+      await api.put(`/contact/${id}/status`, { status });
+      loadMessages();
+    } catch {
+      toast.error("Failed to update");
+    }
+  };
+ 
+  const handleDeleteMessage = async (id) => {
+    if (!confirm("Delete this message?")) return;
+    try {
+      await api.delete(`/contact/${id}`);
+      toast.success("Message deleted");
+      loadMessages();
+    } catch {
+      toast.error("Delete failed");
+    }
+  };
+ 
   if (!user || user.role !== "admin") return null;
-
+ 
   return (
     <div className="min-h-screen pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-black text-white mb-2">⚙️ Admin Panel</h1>
-            <p className="text-gray-400">{books.length} books · {categories.length} categories</p>
+            <h1 className="text-4xl font-black text-white mb-2">
+              ⚙️ Admin Panel
+            </h1>
+            <p className="text-gray-400">
+              {books.length} books · {categories.length} categories
+            </p>
           </div>
           {(activeTab === "books" || activeTab === "categories") && (
-            <button onClick={() => {
-              if (activeTab === "books") { setForm(EMPTY_FORM); setEditing(null); setShowForm(!showForm); }
-              else { setCatForm({ name: "", icon: "📚", description: "" }); setEditingCat(null); setShowCatForm(!showCatForm); }
-            }} className="btn-primary flex items-center gap-2">
-              {(activeTab === "books" ? showForm : showCatForm) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {(activeTab === "books" ? showForm : showCatForm) ? "Cancel" : activeTab === "books" ? "Add Book" : "Add Category"}
+            <button
+              onClick={() => {
+                if (activeTab === "books") {
+                  setForm(EMPTY_FORM);
+                  setEditing(null);
+                  setShowForm(!showForm);
+                } else {
+                  setCatForm({ name: "", icon: "📚", description: "" });
+                  setEditingCat(null);
+                  setShowCatForm(!showCatForm);
+                }
+              }}
+              className="btn-primary flex items-center gap-2"
+            >
+              {(activeTab === "books" ? showForm : showCatForm) ? (
+                <X className="w-4 h-4" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              {(activeTab === "books" ? showForm : showCatForm)
+                ? "Cancel"
+                : activeTab === "books"
+                  ? "Add Book"
+                  : "Add Category"}
             </button>
           )}
         </div>
-
+ 
         {/* Tabs */}
         <div className="flex gap-2 mb-8 flex-wrap">
           {[
-            { id: "books", icon: <BookOpen className="w-4 h-4" />, label: "Books" },
-            { id: "categories", icon: <Tag className="w-4 h-4" />, label: "Categories" },
-            { id: "users", icon: <Users className="w-4 h-4" />, label: "Users" },
-            { id: "orders", icon: <ShoppingBag className="w-4 h-4" />, label: "Orders" },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? "bg-purple-600 text-white" : "bg-white/5 text-gray-400 hover:bg-white/10"}`}>
+            {
+              id: "books",
+              icon: <BookOpen className="w-4 h-4" />,
+              label: "Books",
+            },
+            {
+              id: "categories",
+              icon: <Tag className="w-4 h-4" />,
+              label: "Categories",
+            },
+            {
+              id: "users",
+              icon: <Users className="w-4 h-4" />,
+              label: "Users",
+            },
+            {
+              id: "orders",
+              icon: <ShoppingBag className="w-4 h-4" />,
+              label: "Orders",
+            },
+            {
+              id: "messages",
+              icon: <Mail className="w-4 h-4" />,
+              label: "Messages",
+              badge: messages.filter(m => m.status === 'new').length,
+            },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id ? "bg-purple-600 text-white" : "bg-white/5 text-gray-400 hover:bg-white/10"}`}
+            >
               {tab.icon} {tab.label}
+              {tab.badge > 0 && (
+                <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{tab.badge}</span>
+              )}
             </button>
           ))}
         </div>
-
+ 
         {/* ===== BOOKS TAB ===== */}
         {activeTab === "books" && (
           <>
             {showForm && (
-              <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-                className="glass p-8 rounded-2xl mb-10">
-                <h2 className="text-xl font-bold text-white mb-6">{editing ? "Edit Book" : "Add New Book"}</h2>
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><label className="text-sm text-gray-400 mb-1 block">Title *</label>
-                    <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" placeholder="Book title" /></div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Author *</label>
-                    <input required value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} className="input-field" placeholder="Author name" /></div>
-                  <div className="sm:col-span-2"><label className="text-sm text-gray-400 mb-1 block">Description *</label>
-                    <textarea required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="input-field resize-none" placeholder="Book description" /></div>
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass p-8 rounded-2xl mb-10"
+              >
+                <h2 className="text-xl font-bold text-white mb-6">
+                  {editing ? "Edit Book" : "Add New Book"}
+                </h2>
+                <form
+                  onSubmit={handleSubmit}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                >
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Title *</label>
+                    <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" placeholder="Book title" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Author *</label>
+                    <input required value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} className="input-field" placeholder="Author name" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-sm text-gray-400 mb-1 block">Description *</label>
+                    <textarea required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="input-field resize-none" placeholder="Book description" />
+                  </div>
                   <div>
                     <label className="text-sm text-gray-400 mb-1 block">Cover Image *</label>
                     <div className="flex gap-2">
                       <input value={form.cover} onChange={(e) => setForm({ ...form, cover: e.target.value })} className="input-field flex-1" placeholder="https://..." />
                       <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white text-sm cursor-pointer transition-colors shrink-0">
                         <Upload className="w-4 h-4" />
-                        {uploadingImg ? <span className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" /> : 'Upload'}
+                        {uploadingImg ? <span className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" /> : "Upload"}
                         <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                           const file = e.target.files[0]; if (!file) return;
                           setUploadingImg(true);
                           try {
-                            const fd = new FormData(); fd.append('file', file);
-                            const { data } = await api.post('/upload/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                            setForm(f => ({ ...f, cover: data.url }));
-                            toast.success('Image uploaded! ✅');
-                          } catch { toast.error('Image upload failed'); }
+                            const fd = new FormData(); fd.append("file", file);
+                            const { data } = await api.post("/upload/image", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                            setForm((f) => ({ ...f, cover: data.url }));
+                            toast.success("Image uploaded! ✅");
+                          } catch { toast.error("Image upload failed"); }
                           finally { setUploadingImg(false); }
                         }} />
                       </label>
                     </div>
-                    {form.cover && <img src={form.cover} alt="preview" className="w-16 h-20 object-cover rounded-lg mt-2" onError={(e) => e.target.style.display = 'none'} />}
+                    {form.cover && <img src={form.cover} alt="preview" className="w-16 h-20 object-cover rounded-lg mt-2" onError={(e) => (e.target.style.display = "none")} />}
                   </div>
                   <div>
                     <label className="text-sm text-gray-400 mb-1 block">PDF File</label>
@@ -249,51 +407,37 @@ export default function AdminPage() {
                       <input value={form.pdfUrl} onChange={(e) => setForm({ ...form, pdfUrl: e.target.value })} className="input-field flex-1" placeholder="https://..." />
                       <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-400 text-sm cursor-pointer transition-colors shrink-0">
                         <FileUp className="w-4 h-4" />
-                        {uploadingPdf ? <span className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" /> : 'Upload PDF'}
+                        {uploadingPdf ? <span className="w-3 h-3 border border-purple-400 border-t-transparent rounded-full animate-spin" /> : "Upload PDF"}
                         <input type="file" accept="application/pdf" className="hidden" onChange={async (e) => {
                           const file = e.target.files[0]; if (!file) return;
                           setUploadingPdf(true);
                           try {
-                            const fd = new FormData(); fd.append('file', file);
-                            const { data } = await api.post('/upload/pdf', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                            setForm(f => ({ ...f, pdfUrl: data.url }));
-                            toast.success('PDF uploaded! ✅');
-                          } catch { toast.error('PDF upload failed'); }
+                            const fd = new FormData(); fd.append("file", file);
+                            const { data } = await api.post("/upload/pdf", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                            setForm((f) => ({ ...f, pdfUrl: data.url }));
+                            toast.success("PDF uploaded! ✅");
+                          } catch { toast.error("PDF upload failed"); }
                           finally { setUploadingPdf(false); }
                         }} />
                       </label>
                     </div>
                     {form.pdfUrl && <p className="text-xs text-green-400 mt-1.5 flex items-center gap-1"><FileUp className="w-3 h-3" /> PDF ready</p>}
                   </div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Category</label>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Category</label>
                     <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-field">
                       {categories.length > 0
                         ? categories.map((c) => <option key={c._id} value={c.name}>{c.icon} {c.name}</option>)
-                        : ["Fiction", "Science", "History", "Technology", "Philosophy", "Art"].map(c => <option key={c}>{c}</option>)}
-                    </select></div>
-                 
-                 
-                         <div>
-  <label className="text-sm text-gray-400 mb-1 block">Price ($)</label>
-  <input
-    type="number"
-    value={form.price}
-    onChange={(e) => setForm({ ...form, price: e.target.value })}
-    className="input-field"
-    placeholder="200"
-    min="200"
-  />
-  {!form.isFree && form.price < 200 && form.price > 0 && (
-    <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
-      ⚠️ Minimum price is $200
-    </p>
-  )}
-</div>
-                                
- 
-  
-                
-                 
+                        : ["Fiction", "Science", "History", "Technology", "Philosophy", "Art"].map((c) => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Price ($)</label>
+                    <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="input-field" placeholder="200" min="200" />
+                    {!form.isFree && form.price < 200 && form.price > 0 && (
+                      <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">⚠️ Minimum price is $200</p>
+                    )}
+                  </div>
                   <div className="sm:col-span-2 flex items-center gap-6">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={form.isFree} onChange={(e) => setForm({ ...form, isFree: e.target.checked })} className="w-4 h-4 accent-purple-500" />
@@ -324,7 +468,7 @@ export default function AdminPage() {
                       <th className="p-4">Book</th>
                       <th className="p-4">Category</th>
                       <th className="p-4">Price</th>
-                      
+                      <th className="p-4">Status</th>
                       <th className="p-4">Actions</th>
                     </tr>
                   </thead>
@@ -345,9 +489,9 @@ export default function AdminPage() {
                           {book.isFree ? <span className="text-green-400">Free</span> : `$${book.price || 0}`}
                         </td>
                         <td className="p-4">
-                          {book.status === 'published' && <span className="text-xs text-green-400">✅ Published</span>}
-                          {book.status === 'submit' && <span className="text-xs text-yellow-400">⏳ Submitted</span>}
-                          {book.status === 'review' && <span className="text-xs text-blue-400">🔍 In Review</span>}
+                          {book.status === "published" && <span className="text-xs text-green-400">✅ Published</span>}
+                          {book.status === "submit" && <span className="text-xs text-yellow-400">⏳ Submitted</span>}
+                          {book.status === "review" && <span className="text-xs text-blue-400">🔍 In Review</span>}
                           {!book.status && <span className="text-xs text-gray-500">—</span>}
                         </td>
                         <td className="p-4">
@@ -368,7 +512,7 @@ export default function AdminPage() {
             </div>
           </>
         )}
-
+ 
         {/* ===== CATEGORIES TAB ===== */}
         {activeTab === "categories" && (
           <>
@@ -376,12 +520,18 @@ export default function AdminPage() {
               <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="glass p-8 rounded-2xl mb-8">
                 <h2 className="text-xl font-bold text-white mb-6">{editingCat ? "Edit Category" : "Add New Category"}</h2>
                 <form onSubmit={handleCatSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><label className="text-sm text-gray-400 mb-1 block">Name *</label>
-                    <input required value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} className="input-field" placeholder="e.g. Fiction" /></div>
-                  <div><label className="text-sm text-gray-400 mb-1 block">Icon (emoji)</label>
-                    <input value={catForm.icon} onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })} className="input-field" placeholder="📚" /></div>
-                  <div className="sm:col-span-2"><label className="text-sm text-gray-400 mb-1 block">Description</label>
-                    <input value={catForm.description} onChange={(e) => setCatForm({ ...catForm, description: e.target.value })} className="input-field" placeholder="Short description..." /></div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Name *</label>
+                    <input required value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} className="input-field" placeholder="e.g. Fiction" />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-400 mb-1 block">Icon (emoji)</label>
+                    <input value={catForm.icon} onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })} className="input-field" placeholder="📚" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-sm text-gray-400 mb-1 block">Description</label>
+                    <input value={catForm.description} onChange={(e) => setCatForm({ ...catForm, description: e.target.value })} className="input-field" placeholder="Short description..." />
+                  </div>
                   <div className="sm:col-span-2 flex gap-3">
                     <button type="submit" disabled={catSubmitting} className="btn-primary flex items-center gap-2">
                       {catSubmitting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
@@ -418,7 +568,7 @@ export default function AdminPage() {
             </div>
           </>
         )}
-
+ 
         {/* ===== USERS TAB ===== */}
         {activeTab === "users" && (
           <div className="glass rounded-2xl overflow-hidden">
@@ -445,9 +595,8 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4 text-gray-400">{u.email}</td>
                       <td className="p-4">
-                        <select value={u.role} onChange={(e) => handleUpdateRole(u._id, e.target.value)}
-                          className="bg-gray-800/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-purple-500">
-                          <option value="user">📚 User</option>                        
+                        <select value={u.role} onChange={(e) => handleUpdateRole(u._id, e.target.value)} className="bg-gray-800/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-purple-500">
+                          <option value="user">📚 User</option>
                           <option value="admin">⭐ Admin</option>
                         </select>
                       </td>
@@ -465,7 +614,7 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
+ 
         {/* ===== ORDERS TAB ===== */}
         {activeTab === "orders" && (
           <div className="glass rounded-2xl overflow-hidden">
@@ -489,7 +638,7 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <img src={order.book?.cover} alt="" className="w-8 h-10 object-cover rounded-lg shrink-0" onError={(e) => e.target.style.display = 'none'} />
+                          <img src={order.book?.cover} alt="" className="w-8 h-10 object-cover rounded-lg shrink-0" onError={(e) => (e.target.style.display = "none")} />
                           <div>
                             <p className="text-white line-clamp-1">{order.book?.title}</p>
                             <span className="tag text-xs">{order.book?.category}</span>
@@ -498,14 +647,11 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4 text-purple-400 font-bold">${order.price}</td>
                       <td className="p-4 text-gray-400 text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
-<td className="p-4">
-  <button
-    onClick={() => handleUpdateOrderStatus(order._id, 'shipped')}
-    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors">
-    🚚 Mark Shipped
-  </button>
-</td>
-
+                      <td className="p-4">
+                        <button onClick={() => handleUpdateOrderStatus(order._id, "shipped")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors">
+                          🚚 Mark Shipped
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -513,7 +659,52 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
+ 
+        {/* ===== MESSAGES TAB ===== */}
+        {activeTab === "messages" && (
+          <div className="space-y-4">
+            {messages.length === 0 ? (
+              <div className="text-center py-20 text-gray-500">No messages yet</div>
+            ) : messages.map((msg) => (
+              <motion.div key={msg._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className={`glass p-5 rounded-2xl border ${msg.status === 'new' ? 'border-purple-500/30' : 'border-white/5'}`}>
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-bold text-white">{msg.name}</p>
+                      {msg.status === 'new' && <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-0.5 rounded-full">New</span>}
+                    </div>
+                    <p className="text-sm text-gray-400">{msg.email}</p>
+                    {msg.subject && <p className="text-sm text-purple-300 mt-1">📌 {msg.subject}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-gray-500">{new Date(msg.createdAt).toLocaleDateString()}</span>
+                    <button onClick={() => handleDeleteMessage(msg._id)} className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center justify-center transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm leading-relaxed mb-4">{msg.message}</p>
+                <div className="flex gap-2">
+                  {msg.status !== 'read' && (
+                    <button onClick={() => handleUpdateMessageStatus(msg._id, 'read')} className="text-xs px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors">
+                      Mark as Read
+                    </button>
+                  )}
+                  {msg.status !== 'replied' && (
+                    <button onClick={() => handleUpdateMessageStatus(msg._id, 'replied')} className="text-xs px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors">
+                      Mark as Replied
+                    </button>
+                  )}
+                  <a href={`mailto:${msg.email}`} className="text-xs px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors">
+                    Reply via Email
+                  </a>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+ 
       </div>
     </div>
   );

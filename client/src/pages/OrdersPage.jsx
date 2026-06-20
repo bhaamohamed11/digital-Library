@@ -1,46 +1,42 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { BookOpen, ShoppingBag, Download, ArrowLeft } from 'lucide-react';
-import useStore from '../stores/useStore';
-import api from '../api/axios';
-import toast from 'react-hot-toast';
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { BookOpen, ShoppingBag, Download, ArrowLeft } from "lucide-react";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
 export default function OrdersPage() {
-  const { user } = useStore();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState(null); // null = loading
   const [readerBook, setReaderBook] = useState(null);
+  const mounted = useRef(true);
 
-  useEffect(() => { loadOrders(); }, []);
-
-  const loadOrders = async () => {
-    try {
-      const { data } = await api.get('/orders/my-orders');
-      setOrders(data);
-    } catch { }
-    finally { setLoading(false); }
-  };
+  useEffect(() => {
+    mounted.current = true;
+    api.get("/orders/my-orders", {
+      headers: { "Cache-Control": "no-cache" },
+    }).then((res) => {
+      if (mounted.current) setOrders(res.data || []);
+    }).catch(() => {
+      if (mounted.current) setOrders([]);
+    });
+    return () => { mounted.current = false; };
+  }, []);
 
   const handleDownload = async (book) => {
-    if (!book?.pdfUrl) { toast.error('No PDF available'); return; }
-    toast.loading('Preparing...', { id: 'dl' });
+    if (!book?.pdfUrl) { toast.error("No PDF available"); return; }
+    toast.loading("Preparing...", { id: "dl" });
     try {
       const res = await fetch(book.pdfUrl);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${book.title}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success('Downloaded! 📥', { id: 'dl' });
-    } catch { toast.error('Download failed', { id: 'dl' }); }
+      const a = document.createElement("a");
+      a.href = url; a.download = `${book.title}.pdf`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      toast.success("Downloaded! 📥", { id: "dl" });
+    } catch { toast.error("Download failed", { id: "dl" }); }
   };
 
-  // ===== PDF READER =====
   if (readerBook) {
     return (
       <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col">
@@ -59,17 +55,13 @@ export default function OrdersPage() {
           </button>
         </div>
         <div className="flex-1 overflow-hidden bg-white">
-          <iframe
-            src={readerBook.pdfUrl}
-            className="w-full h-full border-0"
-            title={readerBook.title}
-          />
+          <iframe src={readerBook.pdfUrl} className="w-full h-full border-0" title={readerBook.title} />
         </div>
       </div>
     );
   }
 
-  if (loading) return (
+  if (orders === null) return (
     <div className="min-h-screen pt-24 flex items-center justify-center">
       <span className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
     </div>
@@ -94,7 +86,7 @@ export default function OrdersPage() {
               className="glass p-4 rounded-2xl flex items-center gap-4">
               <img src={order.book?.cover} alt={order.book?.title}
                 className="w-16 h-20 object-cover rounded-xl shrink-0"
-                onError={(e) => e.target.src = 'https://via.placeholder.com/60x80?text=📖'} />
+                onError={(e) => (e.target.src = "https://via.placeholder.com/60x80?text=📖")} />
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-white truncate">{order.book?.title}</h3>
                 <p className="text-sm text-gray-400">{order.book?.author}</p>

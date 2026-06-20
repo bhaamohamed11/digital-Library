@@ -185,7 +185,8 @@ export default function Navbar() {
   { to: '/books', label: 'Books' },
   { to: '/categories', label: 'Categories' },
   { to: '/authors', label: 'Authors' },
-  { to: '/contact', label: 'Contact' },
+  ...(!user || user.role !== 'admin' ? [{ to: '/contact', label: 'Contact' }] : []),
+ // { to: '/contact', label: 'Contact' },
 ].map((link) => (
   <Link key={link.to} to={link.to}
     className={`text-sm font-medium px-3 py-2 rounded-lg transition-all ${
@@ -196,11 +197,11 @@ export default function Navbar() {
     {link.label}
   </Link>
 ))}
-          </div>
+</div>
 
           {/* Auth */}
           <div className="flex items-center gap-2 shrink-0">
-            {user && (
+            {user && user.role !== 'admin' && (
               <Link to="/cart" className="relative w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-300 transition-all">
                 <ShoppingCart className="w-5 h-5" />
                 {cart.length > 0 && (
@@ -224,12 +225,17 @@ export default function Navbar() {
                   {userMenu && (
                     <motion.div initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.95 }}
                       className="absolute right-0 top-full mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                        {/*Dashpord/*/}
+
+                        {user.role !== 'admin' && (
+                          <>
                       <Link to="/dashboard" className="flex items-center gap-2 p-3 hover:bg-white/5 text-sm text-gray-300 hover:text-white transition-colors">
-                        <Heart className="w-4 h-4 text-pink-400" /> Dashboard
+                        <User className="w-4 h-4 text-pink-400" /> Account 
                       </Link>
                       <Link to="/orders" className="flex items-center gap-2 p-3 hover:bg-white/5 text-sm text-gray-300 hover:text-white transition-colors border-t border-white/5">
                         <ShoppingBag className="w-4 h-4 text-purple-400" /> My Orders
                       </Link>
+                      </>  )}
                       {user.role === 'admin' && (
                         <Link to="/stats" className="flex items-center gap-2 p-3 hover:bg-white/5 text-sm text-gray-300 hover:text-white transition-colors border-t border-white/5">
                           <TrendingUp className="w-4 h-4 text-green-400" /> Dashboard Stats
@@ -240,7 +246,7 @@ export default function Navbar() {
                           <Settings className="w-4 h-4 text-amber-400" /> Admin Panel
                         </Link>
                       )}
-                      <button onClick={logout} className="w-full flex items-center gap-2 p-3 hover:bg-red-500/10 text-sm text-gray-300 hover:text-red-400 transition-colors border-t border-white/5">
+                      <button onClick={() => { logout(); navigate('/'); }} className="w-full flex items-center gap-2 p-3 hover:bg-red-500/10 text-sm text-gray-300 hover:text-red-400 transition-colors border-t border-white/5">
                         <LogOut className="w-4 h-4" /> Sign Out
                       </button>
                     </motion.div>
@@ -269,7 +275,9 @@ export default function Navbar() {
               <Link to="/books" className="text-gray-300 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 text-sm font-medium transition-all">📚 Books</Link>
               <Link to="/categories" className="text-gray-300 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 text-sm font-medium transition-all">🗂 Categories</Link>
               <Link to="/authors" className="text-gray-300 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 text-sm font-medium transition-all">✍️ Authors</Link>
-              <Link to="/contact" className="text-gray-300 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 text-sm font-medium transition-all">📬 Contact</Link>
+              {(!user || user.role !== 'admin') && (
+                <Link to="/contact" className="text-gray-300 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 text-sm font-medium transition-all">📬 Contact</Link>
+                )}
               <Link to="/about" className="text-gray-300 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 text-sm font-medium transition-all">ℹ️ About Us</Link>
               {!user && <Link to="/login" className="text-gray-300 hover:text-white py-3 px-4 rounded-xl hover:bg-white/5 text-sm font-medium">Sign In</Link>}
             </div>

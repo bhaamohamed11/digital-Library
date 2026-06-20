@@ -136,7 +136,9 @@ export default function BookDetailPage() {
                              </div>
 
               <div className="flex flex-col gap-3">
-                {/* Cart */}
+                              {/* AddToCart */}
+                {user&&user.role !== 'admin' && (
+                  <>
                 <button onClick={() => {
                   if (!user) { toast.error('Sign in first'); return; }
                   if (inCart) { removeFromCart(book._id); toast.success('Removed from cart'); }
@@ -147,8 +149,11 @@ export default function BookDetailPage() {
                   <ShoppingCart className="w-4 h-4" />
                   {inCart ? 'Remove from Cart ✕' : 'Add to Cart'}
                 </button>
+                </>)}
+                            {/* HandleFavorite */}
 
-                {/* Favorite فقط */}
+                {user&&user.role !== 'admin' && (
+                 <>
                 <button onClick={handleFavorite}
                   className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-sm font-medium
                     ${fav ? 'bg-pink-500/20 border-pink-500/50 text-pink-400' : 'border-white/10 text-gray-400 hover:border-pink-500/30 hover:text-pink-400'}`}>
@@ -156,7 +161,7 @@ export default function BookDetailPage() {
                   {fav ? 'Saved' : 'Save'}
                 </button>
 
-               
+               </> )}
               </div>
             </div>
           </motion.div>
@@ -204,48 +209,50 @@ export default function BookDetailPage() {
 
         
 
-            {/* Reviews */}
-            <div className="border-t border-white/10 pt-8">
-              <h2 className="text-2xl font-bold text-white mb-6">Reviews</h2>
-              {user && (
-                <form onSubmit={handleReview} className="glass p-6 rounded-2xl mb-6">
-                  <h3 className="font-semibold text-white mb-4">Write a Review</h3>
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-400 mb-2">Your Rating</p>
-                    <StarRating rating={myRating} onRate={setMyRating} size="lg" />
-                  </div>
-                  <textarea value={myComment} onChange={(e) => setMyComment(e.target.value)}
-                    placeholder="Share your thoughts about this book..." rows={3}
-                    className="input-field resize-none mb-4" />
-                  <button type="submit" disabled={submitting} className="btn-primary text-sm flex items-center gap-2">
-                    {submitting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-                    Submit Review
-                  </button>
-                </form>
-              )}
-              <div className="space-y-4">
-                {reviews.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No reviews yet. Be the first to review!</p>
-                ) : reviews.map((r) => (
-                  <div key={r._id} className="glass p-5 rounded-xl">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center overflow-hidden shrink-0">
-                        {r.user?.avatar ? <img src={r.user.avatar} className="w-full h-full object-cover" alt="" /> : <User className="w-4 h-4 text-white" />}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">{r.user?.name || 'Anonymous'}</p>
-                        <p className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="ml-auto">
-                        <StarRating rating={r.rating} size="sm" />
-                      </div>
-                    </div>
-                    {r.comment && <p className="text-sm text-gray-400">{r.comment}</p>}
-                  </div>
-                ))}
-              </div>
+          {/* Reviews */}
+{user && user.role !== 'admin' && (
+  <div className="border-t border-white/10 pt-8">
+    <h2 className="text-2xl font-bold text-white mb-6">Reviews</h2>
+    {user && (
+      <form onSubmit={handleReview} className="glass p-6 rounded-2xl mb-6">
+        <h3 className="font-semibold text-white mb-4">Write a Review</h3>
+        <div className="mb-4">
+          <p className="text-sm text-gray-400 mb-2">Your Rating</p>
+          <StarRating rating={myRating} onRate={setMyRating} size="lg" />
+        </div>
+        <textarea value={myComment} onChange={(e) => setMyComment(e.target.value)}
+          placeholder="Share your thoughts about this book..." rows={3}
+          className="input-field resize-none mb-4" />
+        <button type="submit" disabled={submitting} className="btn-primary text-sm flex items-center gap-2">
+          {submitting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+          Submit Review
+        </button>
+      </form>
+    )}
+    <div className="space-y-4">
+      {reviews.length === 0 ? (
+        <p className="text-gray-500 text-sm">No reviews yet. Be the first to review!</p>
+      ) : reviews.map((r) => (
+        <div key={r._id} className="glass p-5 rounded-xl">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-lg bg-purple-600 flex items-center justify-center overflow-hidden shrink-0">
+              {r.user?.avatar ? <img src={r.user.avatar} className="w-full h-full object-cover" alt="" /> : <User className="w-4 h-4 text-white" />}
             </div>
-          </motion.div>
+            <div>
+              <p className="text-sm font-medium text-white">{r.user?.name || 'Anonymous'}</p>
+              <p className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div className="ml-auto">
+              <StarRating rating={r.rating} size="sm" />
+            </div>
+          </div>
+          {r.comment && <p className="text-sm text-gray-400">{r.comment}</p>}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+        </motion.div>
         </div>
       </div>
     </div>

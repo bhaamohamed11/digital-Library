@@ -16,7 +16,9 @@ const addReview = async (req, res) => {
   try {
     const { book, bookId, rating, comment } = req.body;
     const bookIdFinal = book || bookId;
-
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({ message: 'Comment is required' });
+    }
     if (!bookIdFinal) return res.status(400).json({ message: 'Book ID is required' });
 
     const existing = await Review.findOne({ user: req.user._id, book: bookIdFinal });

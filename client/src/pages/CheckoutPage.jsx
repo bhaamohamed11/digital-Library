@@ -1,10 +1,16 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { CreditCard, Lock, CheckCircle, Download, FileText } from 'lucide-react';
-import useStore from '../stores/useStore';
-import api from '../api/axios';
-import toast from 'react-hot-toast';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  CreditCard,
+  Lock,
+  CheckCircle,
+  Download,
+  FileText,
+} from "lucide-react";
+import useStore from "../stores/useStore";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const { cart, clearCart, user } = useStore();
@@ -15,36 +21,68 @@ export default function CheckoutPage() {
   const total = cart.reduce((sum, book) => sum + (book.price || 0), 0);
 
   const handleCheckout = async () => {
-    if (!user) { navigate('/login'); return; }
+    if (!user) {
+      navigate("/login");
+      return;
+    }
     setLoading(true);
     try {
+      const { data: myOrders } = await api.get("/orders/my-orders");
+      const purchasedIds = myOrders.map((o) => o.book?._id);
+      const newBooks = cart.filter((book) => !purchasedIds.includes(book._id));
+
+      if (newBooks.length === 0) {
+        toast.error("All books in your cart are already purchased!");
+        clearCart();
+        setLoading(false);
+        return;
+      }
+
+      if (newBooks.length < cart.length) {
+        toast("Some books were already purchased and skipped", { icon: "⚠️" });
+      }
+
       const orders = [];
-      for (const book of cart) {
+      for (const book of newBooks) {
         const { data } = await api.post(`/orders/${book._id}`);
         orders.push({ ...data, book });
       }
-      setOrderData({ orders, cart: [...cart], total, date: new Date() });
+      const newTotal = newBooks.reduce((sum, b) => sum + (b.price || 0), 0);
+      setOrderData({
+        orders,
+        cart: newBooks,
+        total: newTotal,
+        date: new Date(),
+      });
       clearCart();
       setDone(true);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Checkout failed');
-    } finally { setLoading(false); }
+      toast.error(err.response?.data?.message || "Checkout failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const downloadInvoice = () => {
     if (!orderData) return;
 
-    const date = new Date(orderData.date).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric'
+    const date = new Date(orderData.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
 
-    const itemsHTML = orderData.cart.map(book => `
+    const itemsHTML = orderData.cart
+      .map(
+        (book) => `
       <tr>
         <td style="padding:10px;border-bottom:1px solid #eee;">${book.title}</td>
         <td style="padding:10px;border-bottom:1px solid #eee;">${book.author}</td>
         <td style="padding:10px;border-bottom:1px solid #eee;text-align:right;">$${book.price || 0}</td>
       </tr>
-    `).join('');
+    `,
+      )
+      .join("");
 
     const html = `
       <!DOCTYPE html>
@@ -107,14 +145,14 @@ export default function CheckoutPage() {
       </html>
     `;
 
-    const blob = new Blob([html], { type: 'text/html' });
+    const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `invoice-${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Invoice downloaded! 🧾');
+    toast.success("Invoice downloaded! 🧾");
   };
 
   if (done) {
@@ -123,7 +161,9 @@ export default function CheckoutPage() {
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
           <CheckCircle className="w-20 h-20 text-green-400" />
         </motion.div>
-        <h2 className="text-3xl font-black text-white">Purchase Successful! 🎉</h2>
+        <h2 className="text-3xl font-black text-white">
+          Purchase Successful! 🎉
+        </h2>
         <p className="text-gray-400">Your books are now available to read</p>
 
         {/* Invoice Summary */}
@@ -133,7 +173,10 @@ export default function CheckoutPage() {
               <FileText className="w-5 h-5 text-purple-400" /> Order Summary
             </h3>
             {orderData.cart.map((book) => (
-              <div key={book._id} className="flex justify-between text-sm text-gray-400 mb-2">
+              <div
+                key={book._id}
+                className="flex justify-between text-sm text-gray-400 mb-2"
+              >
                 <span className="truncate max-w-48">{book.title}</span>
                 <span>${book.price || 0}</span>
               </div>
@@ -146,11 +189,13 @@ export default function CheckoutPage() {
         )}
 
         <div className="flex gap-3 mt-2">
-          <button onClick={downloadInvoice}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-green-500/20 text-green-400 hover:bg-green-500/30 font-medium transition-colors">
+          <button
+            onClick={downloadInvoice}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl bg-green-500/20 text-green-400 hover:bg-green-500/30 font-medium transition-colors"
+          >
             <Download className="w-4 h-4" /> Download Invoice
           </button>
-          <button onClick={() => navigate('/orders')} className="btn-primary">
+          <button onClick={() => navigate("/orders")} className="btn-primary">
             My Orders
           </button>
         </div>
@@ -169,21 +214,39 @@ export default function CheckoutPage() {
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">Card Number</label>
-              <input className="input-field" placeholder="4242 4242 4242 4242" maxLength={19} />
+              <label className="text-sm text-gray-400 mb-1 block">
+                Card Number
+              </label>
+              <input
+                className="input-field"
+                placeholder="4242 4242 4242 4242"
+                maxLength={19}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Expiry Date</label>
-                <input className="input-field" placeholder="MM/YY" maxLength={5} />
+                <label className="text-sm text-gray-400 mb-1 block">
+                  Expiry Date
+                </label>
+                <input
+                  className="input-field"
+                  placeholder="MM/YY"
+                  maxLength={5}
+                />
               </div>
               <div>
                 <label className="text-sm text-gray-400 mb-1 block">CVV</label>
-                <input className="input-field" placeholder="123" maxLength={3} />
+                <input
+                  className="input-field"
+                  placeholder="123"
+                  maxLength={3}
+                />
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-400 mb-1 block">Card Holder Name</label>
+              <label className="text-sm text-gray-400 mb-1 block">
+                Card Holder Name
+              </label>
               <input className="input-field" placeholder="John Doe" />
             </div>
           </div>
@@ -191,8 +254,11 @@ export default function CheckoutPage() {
 
         <div className="glass p-6 rounded-2xl mb-6">
           <h2 className="font-bold text-white mb-4">Order Summary</h2>
-          {cart.map(book => (
-            <div key={book._id} className="flex justify-between text-sm text-gray-400 mb-2">
+          {cart.map((book) => (
+            <div
+              key={book._id}
+              className="flex justify-between text-sm text-gray-400 mb-2"
+            >
               <span className="truncate max-w-48">{book.title}</span>
               <span>${book.price || 0}</span>
             </div>
@@ -203,16 +269,22 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <button onClick={handleCheckout} disabled={loading}
-          className="btn-primary w-full flex items-center justify-center gap-2 text-base py-4">
-          {loading
-            ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            : <Lock className="w-5 h-5" />}
-          {loading ? 'Processing...' : `Pay $${total}`}
+        <button
+          onClick={handleCheckout}
+          disabled={loading}
+          className="btn-primary w-full flex items-center justify-center gap-2 text-base py-4"
+        >
+          {loading ? (
+            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <Lock className="w-5 h-5" />
+          )}
+          {loading ? "Processing..." : `Pay $${total}`}
         </button>
 
         <p className="text-center text-xs text-gray-500 mt-4 flex items-center justify-center gap-1">
-          <Lock className="w-3 h-3" /> This is a simulated payment — no real charge
+          <Lock className="w-3 h-3" /> This is a simulated payment — no real
+          charge
         </p>
       </div>
     </div>

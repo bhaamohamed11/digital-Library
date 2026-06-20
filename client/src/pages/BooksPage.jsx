@@ -37,6 +37,7 @@ export default function BooksPage() {
       category: currentCat,
       sort: currentSort,
       page: currentPage,
+      limit: 100,
       // نؤكد على أننا نريد فقط الكتب المنشورة
     });
   }, [currentSearch, currentCat, currentSort, currentPage, fetchBooks]);
@@ -138,8 +139,9 @@ export default function BooksPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
+            className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-10"
           >
+
             {books.map((book, i) => (
               <BookCard key={book._id} book={book} index={i} />
             ))}

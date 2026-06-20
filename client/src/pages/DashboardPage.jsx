@@ -15,12 +15,12 @@ const TABS = [
 
 export default function DashboardPage() {
   const { user, logout, setUser } = useStore();
-  const [tab, setTab] = useState('favorites');
   const [favBooks, setFavBooks] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [tab, setTab] = useState('profile');
   const [readerBook, setReaderBook] = useState(null);
   const navigate = useNavigate();
-
+  const [editingPw, setEditingPw] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', avatar: '' });
   const [pwForm, setPwForm] = useState({ newPw: '', confirm: '' });
@@ -36,13 +36,15 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const [favRes, histRes, ordersRes] = await Promise.all([
+      const [favRes, ordersRes] = await Promise.all([
         api.get('/users/favorites'),
         api.get('/orders/my-orders'),
       ]);
       setFavBooks(favRes.data || []);
       setOrders(ordersRes.data || []);
-    } catch { }
+    } catch (err) {
+      console.error('Dashboard loadData error:', err.response?.data || err.message);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -67,6 +69,7 @@ export default function DashboardPage() {
       await api.put('/users/profile', { password: pwForm.newPw });
       toast.success('Password changed! 🔒');
       setPwForm({ newPw: '', confirm: '' });
+      setEditingPw(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed');
     } finally { setSavingPw(false); }
@@ -165,7 +168,7 @@ export default function DashboardPage() {
               <div className="text-center py-20">
                 <Heart className="w-12 h-12 text-gray-700 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-white mb-2">No favorites yet</h3>
-                <p className="text-gray-500 mb-6">Start browsing and save books you love</p>
+                <p className="text-gray-500 mb-6">Books you love will show up here</p>
                 <Link to="/books" className="btn-primary inline-flex items-center gap-2">
                   <BookOpen className="w-4 h-4" /> Browse Books
                 </Link>
@@ -225,8 +228,6 @@ export default function DashboardPage() {
               </div>
             )
           )}
-
-         
 
           {/* PROFILE */}
           {tab === 'profile' && (
@@ -297,32 +298,53 @@ export default function DashboardPage() {
               </div>
 
               <div className="glass p-6 rounded-2xl">
-                <h2 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-purple-400" /> Change Password
-                </h2>
-                <div className="space-y-4">
-                  <div className="relative">
-                    <label className="block text-sm text-gray-400 mb-1">New Password</label>
-                    <input type={showPw ? 'text' : 'password'} value={pwForm.newPw}
-                      onChange={(e) => setPwForm({ ...pwForm, newPw: e.target.value })}
-                      className="input-field pr-10" placeholder="Min 6 characters" />
-                    <button onClick={() => setShowPw(!showPw)}
-                      className="absolute right-3 top-8 text-gray-500 hover:text-white transition-colors">
-                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-purple-400" /> Password
+                  </h2>
+                  {!editingPw ? (
+                    <button onClick={() => setEditingPw(true)}
+                      className="flex items-center gap-1.5 text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                      <Edit2 className="w-4 h-4" /> Edit
+                    </button>
+                  ) : (
+                    <button onClick={() => { setEditingPw(false); setPwForm({ newPw: '', confirm: '' }); }}
+                      className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors">
+                      <X className="w-4 h-4" /> Cancel
+                    </button>
+                  )}
+                </div>
+
+                {!editingPw ? (
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 uppercase tracking-wider">Current Password</label>
+                    <p className="text-white font-medium tracking-widest">••••••••</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <label className="block text-sm text-gray-400 mb-1">New Password</label>
+                      <input type={showPw ? 'text' : 'password'} value={pwForm.newPw}
+                        onChange={(e) => setPwForm({ ...pwForm, newPw: e.target.value })}
+                        className="input-field pr-10" placeholder="Min 6 characters" />
+                      <button onClick={() => setShowPw(!showPw)}
+                        className="absolute right-3 top-8 text-gray-500 hover:text-white transition-colors">
+                        {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Confirm Password</label>
+                      <input type="password" value={pwForm.confirm}
+                        onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
+                        className="input-field" placeholder="Repeat new password" />
+                    </div>
+                    <button onClick={handleChangePassword} disabled={savingPw}
+                      className="btn-primary flex items-center gap-2 text-sm">
+                      {savingPw ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Lock className="w-4 h-4" />}
+                      Update Password
                     </button>
                   </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Confirm Password</label>
-                    <input type="password" value={pwForm.confirm}
-                      onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
-                      className="input-field" placeholder="Repeat new password" />
-                  </div>
-                  <button onClick={handleChangePassword} disabled={savingPw}
-                    className="btn-primary flex items-center gap-2 text-sm">
-                    {savingPw ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Lock className="w-4 h-4" />}
-                    Update Password
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           )}

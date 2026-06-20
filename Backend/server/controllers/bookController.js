@@ -6,12 +6,12 @@ const getBooks = async (req, res) => {
     const query = { status: 'published' };
 
     if (search) {
-  query.$or = [
-    { title: { $regex: search, $options: 'i' } },
-    { author: { $regex: search, $options: 'i' } },
-    { description: { $regex: search, $options: 'i' } },
-  ];
-}
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { author: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
     if (category && category !== 'all') query.category = category;
     if (language) query.language = language;
     if (minRating) query.rating = { $gte: Number(minRating) };
@@ -39,9 +39,21 @@ const getBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ message: 'Book not found' });
-    book.downloads += 1;
-    await book.save();
     res.json(book);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+const incrementDownloads = async (req, res) => {
+  try {
+    const book = await Book.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { downloads: 1 } },
+      { new: true }
+    );
+    if (!book) return res.status(404).json({ message: 'Book not found' });
+    res.json({ downloads: book.downloads });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -84,4 +96,4 @@ const getFeaturedBooks = async (req, res) => {
   }
 };
 
-module.exports = { getBooks, getBook, createBook, updateBook, deleteBook, getFeaturedBooks };
+module.exports = { getBooks, getBook, incrementDownloads, createBook, updateBook, deleteBook, getFeaturedBooks };

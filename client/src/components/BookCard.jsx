@@ -23,7 +23,7 @@ export default function BookCard({ book, index = 0 }) {
       transition={{ delay: index * 0.05 }}
     >
       <Link to={`/books/${book._id}`} className="group block">
-        <div className="card p-0 overflow-hidden book-hover">
+      <div className="overflow-hidden rounded-xl bg-transparent scale-90">
           {/* Cover */}
           <div className="relative overflow-hidden aspect-[3/4] bg-gray-800">
             <img
@@ -46,17 +46,20 @@ export default function BookCard({ book, index = 0 }) {
                 <span className="bg-amber-500 text-black text-xs font-bold px-2 py-0.5 rounded-full">⭐ Featured</span>
               </div>
             )}
-            {/* Favorite */}
+
+           {/* Favorite */}
+           {(!user || user.role !== 'admin') && (
             <button onClick={handleFavorite}
-              className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300
-                ${fav ? 'bg-pink-500 shadow-lg shadow-pink-500/50' : 'bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100'}`}
-            >
-              <Heart className={`w-4 h-4 ${fav ? 'text-white fill-white' : 'text-white'}`} />
-            </button>
+            className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300
+              ${fav ? 'bg-pink-500 shadow-lg shadow-pink-500/50' : 'bg-black/50 backdrop-blur-sm opacity-0 group-hover:opacity-100'}`}
+              >
+                <Heart className={`w-4 h-4 ${fav ? 'text-white fill-white' : 'text-white'}`} />
+                </button>
+           )}
           </div>
 
           {/* Info */}
-          <div className="p-4">
+          <div className="pt-3 px-1">
             <h3 className="font-bold text-white text-sm leading-tight line-clamp-2 group-hover:text-purple-300 transition-colors mb-1">
               {book.title}
             </h3>
